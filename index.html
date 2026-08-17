@@ -224,7 +224,7 @@ function render(){
       const titleHtml = item.url
         ? `<a href="${item.url}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>`
         : escapeHtml(item.title);
-      const note = item.note || item.reason || '';
+      const note = item.note || item.summary || item.reason || '';
       const delBtn = item._auto ? '' : `<button class="entry-del" data-id="${item.id}">×</button>`;
       const tag = item._auto
         ? `<span class="entry-tag">🤖 自動収集${item.source ? ' ・ ' + escapeHtml(item.source) : ''}</span>`
