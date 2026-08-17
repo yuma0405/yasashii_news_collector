@@ -10,17 +10,19 @@ import time
 from pathlib import Path
 
 import feedparser
-import google.generativeai as genai
+from google import genai
 
 ROOT = Path(__file__).parent
 SOURCES_FILE = ROOT / "sources.json"
 SEEN_FILE = ROOT / "seen.json"
 DATA_FILE = ROOT / "data" / "news.json"
 
-MAX_ENTRIES_PER_FEED = 20   # 1フィードにつき新しい順に何件まで見るか
-MAX_NEWS_KEEP = 300         # news.json に保持する最大件数
-MAX_SEEN_KEEP = 3000        # 重複チェック用リストの最大件数
-SLEEP_BETWEEN_CALLS = 2     # Gemini APIのレート制限対策(秒)
+MODEL_NAME = "gemini-3.5-flash-lite"  # 軽い判定タスクなので低コストなモデルを使用
+
+MAX_ENTRIES_PER_FEED = 20
+MAX_NEWS_KEEP = 300
+MAX_SEEN_KEEP = 3000
+SLEEP_BETWEEN_CALLS = 2
 
 JUDGE_PROMPT = """あなたは「心が痛まない、やさしいニュース」だけを選ぶ編集者です。
 以下のニュース見出しと概要を読み、次の形式のJSONのみを出力してください。
@@ -54,14 +56,14 @@ def save_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def judge(model, title: str, summary: str):
-    """Gemini APIに1記事を判定させる。失敗時は安全側(false)を返す"""
+def judge(client, title: str, summary: str):
     prompt = JUDGE_PROMPT.format(title=title, summary=(summary or "")[:200])
     try:
-        resp = model.generate_content(prompt)
-        text = resp.text.strip()
-        # ```json ... ``` のようなコードブロックで返ってきた場合の後処理
-        text = text.strip("`")
+        resp = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+        )
+        text = resp.text.strip().strip("`")
         if text.lower().startswith("json"):
             text = text[4:].strip()
         result = json.loads(text)
@@ -78,8 +80,7 @@ def main():
     if not api_key:
         raise SystemExit("環境変数 GEMINI_API_KEY が設定されていません")
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    client = genai.Client(api_key=api_key)
 
     sources = load_json(SOURCES_FILE, [])
     seen = set(load_json(SEEN_FILE, []))
@@ -109,7 +110,7 @@ def main():
             seen.add(link)
             summary = entry.get("summary", "") or entry.get("description", "")
 
-            gentle, reason = judge(model, title, summary)
+            gentle, reason = judge(client, title, summary)
             time.sleep(SLEEP_BETWEEN_CALLS)
 
             if gentle:
@@ -123,7 +124,6 @@ def main():
                 added += 1
                 print(f"  灯した: {title}")
 
-    # 保持件数を制限（古いものから切り捨て）
     news = news[-MAX_NEWS_KEEP:]
     seen_list = list(seen)[-MAX_SEEN_KEEP:]
 
