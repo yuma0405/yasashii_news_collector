@@ -253,9 +253,13 @@ function render(){
         : `<span class="entry-tag">✍️ 自分で追加</span>`;
       el.innerHTML = `
         ${delBtn}
-        <p class="entry-title">${titleHtml}</p>
-        ${note ? `<p class="entry-note">${escapeHtml(note)}</p>` : ''}
-        ${tag}
+        <div class="entry-row">
+          <div class="entry-main">
+            <p class="entry-title">${titleHtml}</p>
+            ${tag}
+          </div>
+          ${note ? `<p class="entry-note">${escapeHtml(note)}</p>` : ''}
+        </div>
       `;
       list.appendChild(el);
     });
