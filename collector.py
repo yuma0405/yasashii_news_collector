@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 やさしいニュース収集スクリプト
-RSSフィードを巡回し、Gemini APIで「心が痛まない話か」を判定して
+RSSフィードを巡回し、Gemini APIで「心が痛まない話か」を判定・要約して
 data/news.json に追記する。GitHub Actionsから定期実行される想定。
 """
 import os
@@ -17,7 +17,7 @@ SOURCES_FILE = ROOT / "sources.json"
 SEEN_FILE = ROOT / "seen.json"
 DATA_FILE = ROOT / "data" / "news.json"
 
-MODEL_NAME = "gemini-3.5-flash-lite"  # 軽い判定タスクなので低コストなモデルを使用
+MODEL_NAME = "gemini-3.5-flash-lite"
 
 MAX_ENTRIES_PER_FEED = 20
 MAX_NEWS_KEEP = 300
@@ -28,7 +28,7 @@ JUDGE_PROMPT = """あなたは「心が痛まない、やさしいニュース�
 以下のニュース見出しと概要を読み、次の形式のJSONのみを出力してください。
 説明文やコードブロック記号は一切つけないでください。
 
-{{"gentle": true か false, "reason": "15文字程度の短い理由"}}
+{{"gentle": true か false, "summary": "記事の内容を30〜50文字程度で要約した一文", "reason": "やさしいと判定した15文字程度の理由"}}
 
 判定基準:
 - 事件・事故・死亡・災害・戦争・政治的対立・強い批判/炎上を含むものは false
@@ -36,6 +36,7 @@ JUDGE_PROMPT = """あなたは「心が痛まない、やさしいニュース�
   文化・エンタメの前向きな話題などは true
 - 内容が薄い広告・PRだけの記事は false
 - 判断に迷う場合は false（安全側に倒す）
+- summaryは、gentleがfalseの場合も含めて必ず内容を要約すること
 
 見出し: {title}
 概要: {summary}
@@ -57,6 +58,7 @@ def save_json(path: Path, data) -> None:
 
 
 def judge(client, title: str, summary: str):
+    """戻り値: (gentle, summary, reason, judged_ok)"""
     prompt = JUDGE_PROMPT.format(title=title, summary=(summary or "")[:200])
     try:
         resp = client.models.generate_content(
@@ -68,11 +70,12 @@ def judge(client, title: str, summary: str):
             text = text[4:].strip()
         result = json.loads(text)
         gentle = bool(result.get("gentle", False))
+        article_summary = str(result.get("summary", ""))[:100]
         reason = str(result.get("reason", ""))[:60]
-        return gentle, reason
+        return gentle, article_summary, reason, True
     except Exception as e:
-        print(f"  判定エラー（この記事はスキップ扱い）: {e}")
-        return False, ""
+        print(f"  判定エラー（次回再試行します）: {e}")
+        return False, "", "", False
 
 
 def main():
@@ -107,16 +110,21 @@ def main():
             if not link or not title or link in seen:
                 continue
 
-            seen.add(link)
-            summary = entry.get("summary", "") or entry.get("description", "")
+            raw_summary = entry.get("summary", "") or entry.get("description", "")
 
-            gentle, reason = judge(client, title, summary)
+            gentle, article_summary, reason, judged_ok = judge(client, title, raw_summary)
             time.sleep(SLEEP_BETWEEN_CALLS)
+
+            if not judged_ok:
+                continue  # 次回また判定できるよう「未処理」のままにする
+
+            seen.add(link)
 
             if gentle:
                 news.append({
                     "title": title,
                     "url": link,
+                    "summary": article_summary,
                     "reason": reason,
                     "source": name,
                     "addedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
