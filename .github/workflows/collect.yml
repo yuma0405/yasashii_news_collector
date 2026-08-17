@@ -6,6 +6,10 @@ on:
     - cron: '0 10 * * *'   # UTC 10:00 = 日本時間 夜19:00
   workflow_dispatch: {}
 
+concurrency:
+  group: collect-gentle-news
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -36,6 +40,7 @@ jobs:
           git add data/news.json seen.json
           if ! git diff --staged --quiet; then
             git commit -m "やさしいニュースを更新"
+            git pull --rebase origin main
             git push
           else
             echo "更新はありませんでした"
