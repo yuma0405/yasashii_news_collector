@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>やさしいニュース</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #eef1e9;
+    --paper: #f7f8f2;
+    --ink: #2c3a35;
+    --ink-soft: #5b6b62;
+    --moss: #4a6656;
+    --amber: #e3a857;
+    --amber-dim: #cfa66a55;
+    --line: #d8dccf;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    background-image: radial-gradient(circle at 20% 0%, #ffffff55, transparent 40%);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  header{ padding:36px 22px 18px; text-align:center; }
+  h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700; font-size:28px;
+    margin:0 0 6px; letter-spacing:0.04em; color:var(--moss);
+  }
+  .sub{ font-size:13px; color:var(--ink-soft); margin:0; }
+
+  .lantern-wrap{
+    display:flex; justify-content:center; align-items:flex-end; gap:7px;
+    height:44px; margin:22px auto 6px; padding:0 20px; flex-wrap:wrap; max-width:420px;
+  }
+  .lantern{ width:9px; height:9px; border-radius:50%; background:var(--line); transition:all .6s ease; }
+  .lantern.lit{
+    background:var(--amber);
+    box-shadow:0 0 8px 2px var(--amber-dim), 0 0 2px var(--amber);
+    animation:flicker 3.2s ease-in-out infinite;
+  }
+  @keyframes flicker{ 0%,100%{opacity:1;} 50%{opacity:.78;} }
+  .count-line{ text-align:center; font-size:12.5px; color:var(--ink-soft); margin:2px 0 6px; }
+  .count-line b{color:var(--moss); font-weight:700;}
+  .sync-line{ text-align:center; font-size:11px; color:#9aa79d; margin:0 0 26px; }
+
+  main{max-width:520px; margin:0 auto; padding:0 18px;}
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:12px; }
+
+  .add-toggle{
+    display:block; width:100%; background:var(--moss); color:var(--paper);
+    border:none; border-radius:14px; padding:14px; font-size:15px; font-family:inherit;
+    font-weight:700; letter-spacing:0.03em; cursor:pointer; margin-bottom:16px; transition:opacity .2s;
+  }
+  .add-toggle:active{opacity:.8;}
+  .add-form{display:none;}
+  .add-form.open{display:block;}
+  .add-form label{ display:block; font-size:12px; color:var(--ink-soft); margin:10px 0 4px; }
+  .add-form input, .add-form textarea{
+    width:100%; border:1px solid var(--line); border-radius:9px; padding:9px 11px;
+    font-family:inherit; font-size:14px; background:#fff; color:var(--ink); resize:vertical;
+  }
+  .add-form textarea{min-height:52px;}
+  .form-actions{display:flex; gap:10px; margin-top:14px;}
+  .btn-save{ flex:1; background:var(--amber); color:#3a2c14; border:none; border-radius:9px; padding:11px; font-weight:700; font-family:inherit; cursor:pointer; }
+  .btn-cancel{ background:none; border:1px solid var(--line); color:var(--ink-soft); border-radius:9px; padding:11px 16px; font-family:inherit; cursor:pointer; }
+
+  .date-heading{ font-size:12px; color:var(--ink-soft); margin:22px 4px 8px; letter-spacing:0.05em; }
+  .entry{
+    background:var(--paper); border:1px solid var(--line); border-left:3px solid var(--amber);
+    border-radius:10px; padding:13px 15px; margin-bottom:9px; position:relative;
+  }
+  .entry-title{ font-size:15px; font-weight:700; margin:0 0 4px; color:var(--ink); padding-right:20px; }
+  .entry-title a{color:inherit; text-decoration:none; border-bottom:1px dotted var(--moss);}
+  .entry-note{ font-size:13px; color:var(--ink-soft); margin:0; line-height:1.5; }
+  .entry-tag{
+    display:inline-block; font-size:10.5px; color:var(--moss); background:#e7ede6;
+    border-radius:6px; padding:2px 7px; margin-top:6px;
+  }
+  .entry-del{ position:absolute; top:10px; right:12px; border:none; background:none; color:#bbb; font-size:16px; cursor:pointer; padding:2px 6px; }
+
+  .empty{ text-align:center; color:var(--ink-soft); font-size:13.5px; padding:30px 20px; line-height:1.7; }
+
+  .guide{
+    background:#fff; border:1px dashed var(--line); border-radius:12px; padding:14px 16px;
+    font-size:12.5px; color:var(--ink-soft); line-height:1.7; margin-top:26px;
+  }
+  .guide b{color:var(--moss);}
+
+  .reset-row{text-align:center; margin-top:30px;}
+  .reset-row button{ background:none; border:none; color:#b8a; opacity:.5; font-size:11px; text-decoration:underline; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>やさしいニュース</h1>
+  <p class="sub">心が痛まない話だけを、灯りのように集める</p>
+</header>
+
+<div class="lantern-wrap" id="lanternRow"></div>
+<p class="count-line" id="countLine">読み込み中…</p>
+<p class="sync-line" id="syncLine"></p>
+
+<main>
+  <button class="add-toggle" id="addToggle">＋ 自分でも、やさしい話を灯す</button>
+
+  <div class="card add-form" id="addForm">
+    <label>見出し</label>
+    <input type="text" id="fTitle" placeholder="例：迷子の子猫、3日ぶりに家族のもとへ">
+    <label>リンク（任意）</label>
+    <input type="url" id="fUrl" placeholder="https://...">
+    <label>どうやさしいか、ひとこと（任意）</label>
+    <textarea id="fNote" placeholder="読んでほっとした理由など"></textarea>
+    <div class="form-actions">
+      <button class="btn-save" id="fSave">灯す</button>
+      <button class="btn-cancel" id="fCancel">やめる</button>
+    </div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="guide">
+    <b>自動収集について：</b>このアプリは data/news.json に、GitHub Actionsが自動で集めた「心が痛まない」記事を読み込みます。GitHub Pagesで公開していない・オフラインの場合は自動収集ぶんは表示されず、自分で追加した話だけが表示されます。
+  </div>
+
+  <div class="reset-row"><button id="resetBtn">自分で追加した分だけ消去する</button></div>
+</main>
+
+<script>
+const KEY = 'yasashii-news:entries';
+let manualEntries = [];
+let autoEntries = [];
+
+async function loadManual(){
+  try{
+    const res = await window.storage.get(KEY, false);
+    manualEntries = res ? JSON.parse(res.value) : [];
+  }catch(e){
+    manualEntries = [];
+  }
+}
+
+async function saveManual(){
+  try{
+    await window.storage.set(KEY, JSON.stringify(manualEntries), false);
+  }catch(e){
+    console.error('保存に失敗しました', e);
+  }
+}
+
+async function loadAuto(){
+  const syncLine = document.getElementById('syncLine');
+  try{
+    const res = await fetch('./data/news.json', { cache: 'no-store' });
+    if(!res.ok) throw new Error('news.json not found');
+    const data = await res.json();
+    autoEntries = Array.isArray(data) ? data.map(e => ({...e, _auto:true})) : [];
+    syncLine.textContent = autoEntries.length
+      ? `自動収集: ${autoEntries.length}件を読み込みました`
+      : '自動収集: まだデータがありません（Actionsの初回実行待ち）';
+  }catch(e){
+    autoEntries = [];
+    syncLine.textContent = '自動収集データは未接続です（ローカル表示 / GitHub Pages未公開の可能性）';
+  }
+}
+
+function fmtDate(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function render(){
+  const all = [...manualEntries.map(e=>({...e,_auto:false})), ...autoEntries];
+  const total = all.length;
+
+  const dots = Math.max(12, Math.min(total, 24));
+  const lit = Math.min(total, dots);
+  const row = document.getElementById('lanternRow');
+  row.innerHTML = '';
+  for(let i=0;i<dots;i++){
+    const d = document.createElement('div');
+    d.className = 'lantern' + (i < lit ? ' lit' : '');
+    row.appendChild(d);
+  }
+  document.getElementById('countLine').innerHTML =
+    total === 0 ? 'まだ灯りはありません' : `<b>${total}</b> 件のやさしい話を灯してきました`;
+
+  const list = document.getElementById('list');
+  if(total === 0){
+    list.innerHTML = '<div class="empty">まだ何も灯っていません。<br>下のボタンから追加するか、自動収集が動き出すのを待ちましょう。</div>';
+    return;
+  }
+
+  const sorted = [...all].sort((a,b)=> new Date(b.addedAt) - new Date(a.addedAt));
+  const groups = {};
+  sorted.forEach(e=>{
+    const key = fmtDate(e.addedAt) || '日付不明';
+    (groups[key] = groups[key] || []).push(e);
+  });
+
+  list.innerHTML = '';
+  Object.entries(groups).forEach(([date, items])=>{
+    const h = document.createElement('div');
+    h.className = 'date-heading';
+    h.textContent = date;
+    list.appendChild(h);
+    items.forEach(item=>{
+      const el = document.createElement('div');
+      el.className = 'entry';
+      const titleHtml = item.url
+        ? `<a href="${item.url}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>`
+        : escapeHtml(item.title);
+      const note = item.note || item.reason || '';
+      const delBtn = item._auto ? '' : `<button class="entry-del" data-id="${item.id}">×</button>`;
+      const tag = item._auto
+        ? `<span class="entry-tag">🤖 自動収集${item.source ? ' ・ ' + escapeHtml(item.source) : ''}</span>`
+        : `<span class="entry-tag">✍️ 自分で追加</span>`;
+      el.innerHTML = `
+        ${delBtn}
+        <p class="entry-title">${titleHtml}</p>
+        ${note ? `<p class="entry-note">${escapeHtml(note)}</p>` : ''}
+        ${tag}
+      `;
+      list.appendChild(el);
+    });
+  });
+
+  document.querySelectorAll('.entry-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      manualEntries = manualEntries.filter(e=> e.id !== btn.dataset.id);
+      await saveManual();
+      render();
+    });
+  });
+}
+
+document.getElementById('addToggle').addEventListener('click', ()=>{
+  document.getElementById('addForm').classList.add('open');
+  document.getElementById('addToggle').style.display = 'none';
+});
+document.getElementById('fCancel').addEventListener('click', ()=>{
+  document.getElementById('addForm').classList.remove('open');
+  document.getElementById('addToggle').style.display = 'block';
+  document.getElementById('fTitle').value='';
+  document.getElementById('fUrl').value='';
+  document.getElementById('fNote').value='';
+});
+document.getElementById('fSave').addEventListener('click', async ()=>{
+  const title = document.getElementById('fTitle').value.trim();
+  if(!title){ document.getElementById('fTitle').focus(); return; }
+  const url = document.getElementById('fUrl').value.trim();
+  const note = document.getElementById('fNote').value.trim();
+  manualEntries.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    title, url, note,
+    addedAt: new Date().toISOString()
+  });
+  await saveManual();
+  document.getElementById('fCancel').click();
+  render();
+});
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if(!confirm('自分で追加したやさしい話だけを消去します。自動収集ぶんは消えません。よろしいですか？')) return;
+  manualEntries = [];
+  await saveManual();
+  render();
+});
+
+(async function init(){
+  await Promise.all([loadManual(), loadAuto()]);
+  render();
+})();
+</script>
+</body>
+</html>
