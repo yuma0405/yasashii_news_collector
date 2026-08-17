@@ -2,5 +2,13 @@
   {
     "name": "ほっこり癒しニュース",
     "url": "https://hokkory.com/feed/"
+  },
+  {
+    "name": "Googleニュース（主要トピック）",
+    "url": "https://news.google.com/rss?hl=ja&gl=JP&ceid=JP:ja"
+  },
+  {
+    "name": "Googleニュース（ほっこり検索）",
+    "url": "https://news.google.com/rss/search?q=%E3%81%BB%E3%81%A3%E3%81%93%E3%82%8A&hl=ja&gl=JP&ceid=JP:ja"
   }
 ]
